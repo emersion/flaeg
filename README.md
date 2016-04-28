@@ -25,6 +25,7 @@ FFFFFFFF            llllll   ææææææææææ     æææææææææ      gg
                                                              ggggg   
 ```
 [![Coverage](http://gocover.io/_badge/github.com/containous/flaeg?0)](https://gocover.io/github.com/containous/flaeg)
+
 Flaeg is a Go package for initializing the program configuration structure and building its command line interface. Go developers don't need to worry about kepping flags, command and CLI help updated anymore : it works by itself !
 ## Installation
 TODO: Describe the installation process
