@@ -52,18 +52,68 @@ You only need to describe every `StructField` with a `StructTag`,  flaeg will au
  - Pointers flags are Boolean :
 	 - You can give  a structure of default values for those pointers
 	 - Pointer fields will get default values if their flag is called
- - Flags names are fields names by default but they can be overwritten in `StructTag`
+ - Flags names are fields names by default, but you can overwrite it in `StructTag`
  - "Shorthand" flags (1 character) can be added in `StructTag` as well
- - You only need to provide the root-Command which contains the configuration Structure (can be initialized), the default pointers Structure and the function to run  
+ - Flaeg is POSIX compliant (using [pflag](https://github.com/ogier/pflag)
+ - You only need to provide the root-Command which contains the function to run  
  - You can add Sub-Commands to the root-Command
-
-## Installation
+## Getting Started
+### Installation
 To install `Flaeg`, simply run:
 ```
 $ go get github.com/containous/flaeg
 ```
-## Getting Started
 TODO: Write usage instructions
+### Usage
+#### Command
+The `Command` structure contains program/command information (command name and description)
+Config must be a pointer on the configuration struct to parse (it contains default values of field)
+DefaultPointersConfig contains default pointers values: those values are set on pointers fields if their flags are called
+It must be the same type(struct) as Config
+Run is the func which launch the program using initialized configuration structure
+```go
+type Command struct {
+	Name                  string
+	Description           string
+	Config                interface{}
+	DefaultPointersConfig interface{} //TODO:case DefaultPointersConfig is nil
+	Run                   func(InitalizedConfig interface{}) error
+}
+```
+### Example
+We would like to run a program using this configuration
+```go
+// The `Command` structure contains program/command information (command name and description)
+// Config must be a pointer on the configuration struct to parse (it contains default values of field)
+// DefaultPointersConfig contains default pointers values: those values are set on pointers fields if their flags are called
+// It must be the same type(struct) as Config
+Run is the func which launch the program using initialized configuration structuretype Command struct {
+	Name                  string
+	Description           string
+	Config                interface{}
+	DefaultPointersConfig interface{} //TODO:case DefaultPointersConfig is nil
+	Run                   func(InitalizedConfig interface{}) error
+}
+
+//Flaeg struct contains commands (at least the root one)
+//and row arguments (command and/or flags)
+//a map of custom parsers could be use
+type Flaeg struct {
+	rootCommand   *Command
+	commands      []*Command
+	args          []string
+	customParsers map[reflect.Type]Parser
+}
+
+//New creats and initialize a pointer on Field
+func New(rootCommand *Command, args []string) *Flaeg {
+	var f Flaeg
+	f.rootCommand = rootCommand
+	f.args = args
+	f.customParsers = map[reflect.Type]Parser{}
+	return &f
+}
+```
 ## Contributing
 1. Fork it!
 2. Create your feature branch: `git checkout -b my-new-feature`

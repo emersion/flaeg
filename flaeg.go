@@ -451,12 +451,11 @@ func Load(config interface{}, defaultValue interface{}, args []string) error {
 	return LoadWithParsers(config, defaultValue, args, nil)
 }
 
-//Command struct contains program/command information (command name and description)
-//Config must be a pointer on the configuration struct to parse (it containts default values of field)
-//DefaultPointersConfig contains default pointers values: those values are set on pointers fields if their flags are called
-//It must be the same type(struct) as Config
-//Run is the func which launch the program using initialized configuration struct
-type Command struct {
+// The `Command` structure contains program/command information (command name and description)
+// Config must be a pointer on the configuration struct to parse (it contains default values of field)
+// DefaultPointersConfig contains default pointers values: those values are set on pointers fields if their flags are called
+// It must be the same type(struct) as Config
+Run is the func which launch the program using initialized configuration structuretype Command struct {
 	Name                  string
 	Description           string
 	Config                interface{}
