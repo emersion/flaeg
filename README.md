@@ -26,7 +26,7 @@ FFFFFFFF            llllll   ææææææææææ     æææææææææ      gg
 ```
 [![Coverage](http://gocover.io/_badge/github.com/containous/flaeg?0)](https://gocover.io/github.com/containous/flaeg)
 
-`Flaeg` is a Go library for dynamically building a powerful modern command line interface and loading a program configuration structure from arguments.
+Flaeg is a Go library for dynamically building a powerful modern command line interface and loading a program configuration structure from arguments.
 Go developers don't need to worry about keeping flags, command and CLI updated anymore : it works by itself !
 ## Overview
 Do you know how boring it is to keep your CLI up-to-date ?  You will be glad to use Flaeg ;-)
@@ -57,7 +57,12 @@ You only need to describe every `StructField` with a `StructTag`,  flaeg will au
  - Flaeg is POSIX compliant using [pflag](https://github.com/ogier/pflag) package
  - You only need to provide the root-Command which contains the function to run  
  - You can add Sub-Commands to the root-Command
+ 
+## Trivial example
+ TODO soon
+ 
 ## Getting Started
+
 ### Installation
 To install `Flaeg`, simply run:
 ```
@@ -100,7 +105,44 @@ type ServerInfo struct {
 	Load64 int64  `description:"Server load"`       //int64 type field, same description just to be sure it works
 }
 ```
-#### Command
+### Flags
+Flaeg is POSIX compliant using [pflag](https://github.com/ogier/pflag) package
+Flaeg concats the names of fields to generate the flags. They are not case sensitiv. 
+For example, the field `ConnectionMax64` in `OwnerInfo` sub-Structure which is in `Configuration` Structure will be "--db.connexionmax64"
+But you can overwrite it with the `StructTag` "long" as like as the field `ConnectionMax` which is flaged "--db.comax"
+Finally, you can add a "Shorthand" flags (1 character) using the `StructTag` "short", like in the field `LogLevel` with the "Shorthand" flags "-l" in addition to the flag "--loglevel"
+
+### Default values
+Default values on fields come form the Configuration Structure. If it was not initialized, Golang default values are used.
+For pointers, the DefaultPointers Structure provides default values.
+
+### Help
+The help auto-generated using the "description" `StructTag` and default value from Configuration Structure.
+Flag "--help" and "Shorthand" flag "-h" are bound to call the helper.
+If the args parser fail, it will print the error and the helper will be call as well.
+Here an example :
+```
+Usage: flaeg.test [--flag=flag_argument] [-f[flag_argument]] ...     set flag_argument to flag(s)
+   or: flaeg.test [--flag[=true|false| ]] [-f[true|false| ]] ...     set true/false to boolean flag(s)   
+
+Flags:
+	--db                                               Enable database (default "false")
+	--db.comax                                         Number max of connections on database (default "3200000000")
+	--db.connectionmax64                               Number max of connections on database (default "6400000000000000000")
+	--db.ip                                            Server ip address (default "192.168.1.2")
+	--db.load                                          Server load (default "32")
+	--db.load64                                        Server load (default "64")
+	--db.watch                                         Watch device (default "true")
+	-l, --loglevel                                     Log level (default "DEBUG")
+	--owner                                            Enable Owner description (default "true")
+	--owner.dob                                        Owner date of birth (default "1993-09-12 07:32:00 +0000 UTC")
+	--owner.name                                       Owner name (default "true")
+	--owner.rate                                       Owner rate (default "0.999")
+	--owner.servers                                    Owner Server (default "[]")
+	--timeout                                          Timeout duration (default "1s")
+	-h, -help                                          Print Help (this message) and exit
+```
+### Command
 The `Command` structure contains program/command information (command name and description)
 Config must be a pointer on the configuration struct to parse (it contains default values of field)
 DefaultPointersConfig contains default pointers values: those values are set on pointers fields if their flags are called
@@ -131,7 +173,6 @@ So, you can creat Commands like this :
 			}
 			return nil
 		},
-	}
 ```
 NB : You have to creat at least the root-Command, but you can add some sub-Command.
 ### Run Flaeg
@@ -140,7 +181,7 @@ rootCmd is the root-Command
 versionCmd is a sub-Command
 ```go
 	//init flaeg
-	flaeg := flaeg.New(rootCmd, args)
+	flaeg := flaeg.New(rootCmd, os.Args[1:])
 	//add sub-command Version
 	flaeg.AddCommand(versionCmd)
   
@@ -185,7 +226,6 @@ func (c *sliceServerValue) String() string { return fmt.Sprintf("%v", *c) }
 func (c *sliceServerValue) SetValue(val interface{}) {
 	*c = sliceServerValue(val.([]ServerInfo))
 }
-
 ```
 ## Contributing
 1. Fork it!
