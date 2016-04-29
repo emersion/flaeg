@@ -26,8 +26,8 @@ FFFFFFFF            llllll   ææææææææææ     æææææææææ      gg
 ```
 [![Coverage](http://gocover.io/_badge/github.com/containous/flaeg?0)](https://gocover.io/github.com/containous/flaeg)
 
-Flaeg is a Go library for dynamically building a powerful modern command line interface and loading a program configuration structure from arguments.
-Go developers don't need to worry about keeping flags, command and CLI updated anymore : it works by itself !
+Flaeg is a Go library for building dynamically a powerful modern Command Line Interface and loading a program configuration structure from arguments.
+Go developers don't need to worry about keeping flags and commands updated anymore : it works by itself !
 ## Overview
 Do you know how boring it is to keep your CLI up-to-date ?  You will be glad to use Flaeg ;-)
 This package uses your own configuration structure to build your CLI. 
