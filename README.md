@@ -1,5 +1,5 @@
 
-```
+```AsciiDoc
 FFFFFFFFFFFFFFFFFFF lllll                                              
 F:::::::::::::::::F l:::l                                              
 F:::::::::::::::::F l:::l                                              
@@ -54,7 +54,7 @@ You only need to describe every `StructField` with a `StructTag`,  flaeg will au
 	 - Pointer fields will get default values if their flag is called
  - Flags names are fields names by default, but you can overwrite it in `StructTag`
  - "Shorthand" flags (1 character) can be added in `StructTag` as well
- - Flaeg is POSIX compliant (using [pflag](https://github.com/ogier/pflag)
+ - Flaeg is POSIX compliant using [pflag](https://github.com/ogier/pflag) package
  - You only need to provide the root-Command which contains the function to run  
  - You can add Sub-Commands to the root-Command
 ## Getting Started
@@ -63,8 +63,43 @@ To install `Flaeg`, simply run:
 ```
 $ go get github.com/containous/flaeg
 ```
-TODO: Write usage instructions
-### Usage
+### Configurations Structures
+Flaeg works on any kind of structure, you only need to add a `StructTag` "description" on the fields to flag.
+Like this :
+```go
+//Configuration is a struct which contains all differents type to field
+//using parsers on string, time.Duration, pointer, bool, int, int64, time.Time, float64
+type Configuration struct {
+	Name     string        //no description struct tag, it will not be flaged
+	LogLevel string        `short:"l" description:"Log level"`      //string type field, short flag "-l"
+	Timeout  time.Duration `description:"Timeout duration"`         //time.Duration type field
+	Db       *DatabaseInfo `description:"Enable database"`          //pointer type field (on DatabaseInfo)
+	Owner    *OwnerInfo    `description:"Enable Owner description"` //another pointer type field (on OwnerInfo)
+}
+```
+You can add Sub-Structurs :
+```go
+type DatabaseInfo struct {
+	ServerInfo             //Go throught annonymous field
+	ConnectionMax   uint   `long:"comax" description:"Number max of connections on database"` //uint type field, long flag "--comax"
+	ConnectionMax64 uint64 `description:"Number max of connections on database"`              //uint64 type field, same description just to be sure it works
+}
+type OwnerInfo struct {
+	Name        *string      `description:"Owner name"`                     //pointer type field on string
+	DateOfBirth time.Time    `long:"dob" description:"Owner date of birth"` //time.Time type field, long flag "--dob"
+	Rate        float64      `description:"Owner rate"`                     //float64 type field
+	Servers     []ServerInfo `description:"Owner Server"`                   //slice of ServerInfo type field, need a custom parser
+}
+```
+And Anonymous Sub-Structurs :
+```go
+type ServerInfo struct {
+	Watch  bool   `description:"Watch device"`      //bool type
+	IP     string `description:"Server ip address"` //string type field
+	Load   int    `description:"Server load"`       //int type field
+	Load64 int64  `description:"Server load"`       //int64 type field, same description just to be sure it works
+}
+```
 #### Command
 The `Command` structure contains program/command information (command name and description)
 Config must be a pointer on the configuration struct to parse (it contains default values of field)
@@ -76,43 +111,81 @@ type Command struct {
 	Name                  string
 	Description           string
 	Config                interface{}
-	DefaultPointersConfig interface{} //TODO:case DefaultPointersConfig is nil
+	DefaultPointersConfig interface{}
 	Run                   func(InitalizedConfig interface{}) error
 }
 ```
-### Example
-We would like to run a program using this configuration
+So, you can creat Commands like this :
 ```go
-// The `Command` structure contains program/command information (command name and description)
-// Config must be a pointer on the configuration struct to parse (it contains default values of field)
-// DefaultPointersConfig contains default pointers values: those values are set on pointers fields if their flags are called
-// It must be the same type(struct) as Config
-Run is the func which launch the program using initialized configuration structuretype Command struct {
-	Name                  string
-	Description           string
-	Config                interface{}
-	DefaultPointersConfig interface{} //TODO:case DefaultPointersConfig is nil
-	Run                   func(InitalizedConfig interface{}) error
+	rootCmd := &Command{
+		Name: "flaegtest",
+		Description: `flaegtest is a test program made to to test flaeg library.
+    Complete documentation is available at https://github.com/containous/flaeg`,
+		Config:                config,
+		DefaultPointersConfig: defaultPointers,
+		Run: func(InitalizedConfig interface{}) error {
+      //Type assertions
+      config, ok := InitalizedConfig.(*Configuration);
+      if !ok {
+				return fmt.Errorf("Cannot convert the config into Configuration")
+			}
+			return nil
+		},
+	}
+```
+NB : You have to creat at least the root-Command, but you can add some sub-Command.
+### Run Flaeg
+Let's run fleag now :
+rootCmd is the root-Command
+versionCmd is a sub-Command
+```go
+	//init flaeg
+	flaeg := flaeg.New(rootCmd, args)
+	//add sub-command Version
+	flaeg.AddCommand(versionCmd)
+  
+	//run test
+	if err := flaeg.Run(); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+}
+```
+### Custom Parsers
+The function flaeg.AddParser adds custom parser for a specified type
+```go
+func (f *Flaeg) AddParser(typ reflect.Type, parser Parser)
+```
+It can be used like this :
+```go
+//add custom parser to fleag
+flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+```
+sliceServerValue{} need to implement flaeg.Parser :
+```go
+type Parser interface {
+	flag.Getter
+	SetValue(interface{})
+}
+```
+like this :
+```go
+type sliceServerValue []ServerInfo
+
+func (c *sliceServerValue) Set(s string) error {
+	//could use RegExp
+	srv := ServerInfo{IP: s}
+	*c = append(*c, srv)
+	return nil
 }
 
-//Flaeg struct contains commands (at least the root one)
-//and row arguments (command and/or flags)
-//a map of custom parsers could be use
-type Flaeg struct {
-	rootCommand   *Command
-	commands      []*Command
-	args          []string
-	customParsers map[reflect.Type]Parser
+func (c *sliceServerValue) Get() interface{} { return []ServerInfo(*c) }
+
+func (c *sliceServerValue) String() string { return fmt.Sprintf("%v", *c) }
+
+func (c *sliceServerValue) SetValue(val interface{}) {
+	*c = sliceServerValue(val.([]ServerInfo))
 }
 
-//New creats and initialize a pointer on Field
-func New(rootCommand *Command, args []string) *Flaeg {
-	var f Flaeg
-	f.rootCommand = rootCommand
-	f.args = args
-	f.customParsers = map[reflect.Type]Parser{}
-	return &f
-}
 ```
 ## Contributing
 1. Fork it!
