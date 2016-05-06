@@ -198,7 +198,12 @@ func getDefaultValue(defaultValue reflect.Value, defaultPointersValue reflect.Va
 	case reflect.Ptr:
 		if !defaultPointersValue.IsNil() {
 			if len(key) != 0 {
-				defaultValmap[name] = defaultPointersValue
+				//set ptr fields to nil
+				defaultPointersNilValue := defaultPointersValue
+				if err := setPointersNil(defaultPointersNilValue.Elem()); err != nil {
+					return err
+				}
+				defaultValmap[name] = defaultPointersNilValue
 			}
 			if !defaultValue.IsNil() {
 				if err := getDefaultValue(defaultValue.Elem(), defaultPointersValue.Elem(), defaultValmap, name); err != nil {
@@ -230,6 +235,18 @@ func getDefaultValue(defaultValue reflect.Value, defaultPointersValue reflect.Va
 	return nil
 }
 
+func setPointersNil(objValue reflect.Value) error {
+	if objValue.Kind() != reflect.Struct {
+		return fmt.Errorf("Parameters objValue must be a kind of Struct, not a %s", objValue.Kind().String())
+	}
+	for i := 0; i < objValue.NumField(); i++ {
+		if objValue.Field(i).Kind() == reflect.Ptr {
+			objValue.Field(i).Set(reflect.Zero(objValue.Field(i).Type()))
+		}
+	}
+	return nil
+}
+
 //FillStructRecursive initialize a value of any taged Struct given by reference
 func fillStructRecursive(objValue reflect.Value, defaultPointerValmap map[string]reflect.Value, valmap map[string]Parser, key string) error {
 	name := key
@@ -254,7 +271,9 @@ func fillStructRecursive(objValue reflect.Value, defaultPointerValmap map[string
 				}
 				// fmt.Println(name)
 				if objValue.Field(i).Kind() != reflect.Ptr {
+
 					if val, ok := valmap[name]; ok {
+						// fmt.Printf("%s : set def val\n", name)
 						if err := setFields(objValue.Field(i), val); err != nil {
 							return err
 						}
@@ -288,24 +307,32 @@ func fillStructRecursive(objValue reflect.Value, defaultPointerValmap map[string
 		if contains && objValue.IsNil() {
 			needDefault = true
 		}
+
 		if needDefault {
-			if defVal, ok := defaultPointerValmap[name]; ok {
+			if objValue.IsNil() {
+				//set new instance
+				//BUG :(
+				typ := objValue.Type().Elem()
+				inst := reflect.New(typ)
 				if objValue.CanSet() {
 					// fmt.Printf("flag %s use default value %+v\n", name, defVal)
-					objValue.Set(defVal)
+					objValue.Set(inst)
 				} else {
 					return errors.New(objValue.Type().Name() + " is not settable.")
 				}
+			}
+		}
+		if !objValue.IsNil() && (contains || needDefault) {
+			//ISSUE : kind != struct
+			if objValue.Type().Elem().Kind() == reflect.Struct {
+				fmt.Printf("%s : recurse\n", name)
+				if err := fillStructRecursive(objValue.Elem(), defaultPointerValmap, valmap, name); err != nil {
+					return err
+				}
 			} else {
-				return fmt.Errorf("flag %s default value not provided\n", name)
+				fmt.Printf("%s : Should set default value %+v\n", name, defaultPointerValmap[name])
 			}
 		}
-		if contains && !objValue.IsNil() {
-			if err := fillStructRecursive(objValue.Elem(), defaultPointerValmap, valmap, name); err != nil {
-				return err
-			}
-		}
-
 	default:
 		return nil
 	}

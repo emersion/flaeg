@@ -612,8 +612,8 @@ func TestGetDefaultValueInitConfigAllDefault(t *testing.T) {
 		"db.load64":          reflect.ValueOf(int64(64)),
 		"db.comax":           reflect.ValueOf(uint(3200000000)),
 		"db.connectionmax64": reflect.ValueOf(uint64(6400000000000000000)),
-		"owner":              reflect.ValueOf(&OwnerInfo{Name: &checkDefaultStr, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
-		"owner.name":         reflect.ValueOf(&checkDefaultStr), //FIXED ISSUE 6 : souldn't be &"InitOwnerNamePointer"
+		"owner":              reflect.ValueOf(&OwnerInfo{Name: nil, DateOfBirth: checkDefaultDob, Rate: 0.111, Servers: []ServerInfo{ServerInfo{Watch: false, IP: "192.168.1.2", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.3", Load: 0, Load64: 0}, ServerInfo{Watch: false, IP: "192.168.1.4", Load: 0, Load64: 0}}}),
+		"owner.name":         reflect.ValueOf(&checkDefaultStr),
 		"owner.dob":          reflect.ValueOf(checkDob),
 		"owner.rate":         reflect.ValueOf(float64(0.999)),
 		"owner.servers":      reflect.ValueOf(*new([]ServerInfo)),
@@ -622,7 +622,11 @@ func TestGetDefaultValueInitConfigAllDefault(t *testing.T) {
 	for flag, val := range defaultValmap {
 		// fmt.Printf("%s : %+v\n", flag, val)
 		if !reflect.DeepEqual(checkValue[flag].Interface(), val.Interface()) {
+			if flag == "owner.name" {
+				fmt.Printf("owner.name : got %s\n", val.Elem())
+			}
 			t.Fatalf("Error flag %s : \nexpected \t%+v \ngot \t\t%+v\n", flag, checkValue[flag], val)
+
 		}
 	}
 }
@@ -2129,4 +2133,23 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	if err := flaeg.Run(); err == nil || (!strings.Contains(err.Error(), "not found") && !strings.Contains(err.Error(), "Command")) {
 		t.Errorf("Expected Error :Command not found got Error : %s", err)
 	}
+}
+
+func TestNilPointersFields(t *testing.T) {
+	//run test
+	config := newDefaultPointersConfiguration()
+	objVal := reflect.ValueOf(config).Elem()
+	nilPointersConfig := objVal
+
+	if err := setPointersNil(nilPointersConfig); err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	check := Configuration{}
+	if !reflect.DeepEqual(nilPointersConfig.Interface(), check) {
+		t.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, nilPointersConfig)
+	}
+	if !reflect.DeepEqual(objVal.Interface(), *config) {
+		t.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", objVal.Interface(), *config)
+	}
+
 }
