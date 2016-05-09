@@ -14,8 +14,9 @@ import (
 	"time"
 )
 
-//TODO refactor
+//StructField is a reflect.StructField with the optional field Short which contains the StrucTag "short"
 type StructField struct {
+	//TODO refactor
 	reflect.StructField
 	Short string
 }
@@ -186,10 +187,13 @@ func getDefaultValue(defaultValue reflect.Value, defaultPointersValue reflect.Va
 				} else {
 					name = key + "." + strings.ToLower(fieldName)
 				}
-				if _, ok := defaultValmap[name]; ok {
-					return errors.New("Tag already exists: " + name)
+				if defaultValue.Field(i).Kind() != reflect.Ptr {
+					// if _, ok := defaultValmap[name]; ok {
+					// 	return errors.New("Tag already exists: " + name)
+					// }
+					defaultValmap[name] = defaultValue.Field(i)
+					// fmt.Printf("%s: got default value %+v\n", name, defaultValue.Field(i))
 				}
-				defaultValmap[name] = defaultValue.Field(i)
 				if err := getDefaultValue(defaultValue.Field(i), defaultPointersValue.Field(i), defaultValmap, name); err != nil {
 					return err
 				}
@@ -198,12 +202,13 @@ func getDefaultValue(defaultValue reflect.Value, defaultPointersValue reflect.Va
 	case reflect.Ptr:
 		if !defaultPointersValue.IsNil() {
 			if len(key) != 0 {
-				//set ptr fields to nil
-				defaultPointersNilValue := defaultPointersValue
-				if err := setPointersNil(defaultPointersNilValue.Elem()); err != nil {
+				//turn ptr fields to nil
+				defaultPointersNilValue, err := setPointersNil(defaultPointersValue)
+				if err != nil {
 					return err
 				}
 				defaultValmap[name] = defaultPointersNilValue
+				// fmt.Printf("%s: got default value %+v\n", name, defaultPointersNilValue)
 			}
 			if !defaultValue.IsNil() {
 				if err := getDefaultValue(defaultValue.Elem(), defaultPointersValue.Elem(), defaultValmap, name); err != nil {
@@ -218,6 +223,7 @@ func getDefaultValue(defaultValue reflect.Value, defaultPointersValue reflect.Va
 			instValue := reflect.New(defaultPointersValue.Type().Elem())
 			if len(key) != 0 {
 				defaultValmap[name] = instValue
+				// fmt.Printf("%s: got default value %+v\n", name, instValue)
 			}
 			if !defaultValue.IsNil() {
 				if err := getDefaultValue(defaultValue.Elem(), instValue.Elem(), defaultValmap, name); err != nil {
@@ -235,16 +241,28 @@ func getDefaultValue(defaultValue reflect.Value, defaultPointersValue reflect.Va
 	return nil
 }
 
-func setPointersNil(objValue reflect.Value) error {
-	if objValue.Kind() != reflect.Struct {
-		return fmt.Errorf("Parameters objValue must be a kind of Struct, not a %s", objValue.Kind().String())
+//objValue a reflect.Value of a not-nil pointer on a struct
+func setPointersNil(objValue reflect.Value) (reflect.Value, error) {
+	if objValue.Kind() != reflect.Ptr {
+		return objValue, fmt.Errorf("Parameters objValue must be a not-nil pointer on a struct, not a %s", objValue.Kind().String())
+	} else if objValue.IsNil() {
+		return objValue, fmt.Errorf("Parameters objValue must be a not-nil pointer")
+	} else if objValue.Elem().Kind() != reflect.Struct {
+		// fmt.Printf("Parameters objValue must be a not-nil pointer on a struct, not a pointer on a %s\n", objValue.Elem().Kind().String())
+		return objValue, nil
 	}
-	for i := 0; i < objValue.NumField(); i++ {
-		if objValue.Field(i).Kind() == reflect.Ptr {
-			objValue.Field(i).Set(reflect.Zero(objValue.Field(i).Type()))
+	//Clone
+	starObjValue := objValue.Elem()
+	nilPointersObjVal := reflect.New(starObjValue.Type())
+	starNilPointersObjVal := nilPointersObjVal.Elem()
+	starNilPointersObjVal.Set(starObjValue)
+
+	for i := 0; i < nilPointersObjVal.Elem().NumField(); i++ {
+		if nilPointersObjVal.Elem().Field(i).Kind() == reflect.Ptr {
+			nilPointersObjVal.Elem().Field(i).Set(reflect.Zero(nilPointersObjVal.Elem().Field(i).Type()))
 		}
 	}
-	return nil
+	return nilPointersObjVal, nil
 }
 
 //FillStructRecursive initialize a value of any taged Struct given by reference
@@ -309,28 +327,19 @@ func fillStructRecursive(objValue reflect.Value, defaultPointerValmap map[string
 		}
 
 		if needDefault {
-			if objValue.IsNil() {
-				//set new instance
-				//BUG :(
-				typ := objValue.Type().Elem()
-				inst := reflect.New(typ)
-				if objValue.CanSet() {
-					// fmt.Printf("flag %s use default value %+v\n", name, defVal)
-					objValue.Set(inst)
-				} else {
-					return errors.New(objValue.Type().Name() + " is not settable.")
-				}
+			if defVal, ok := defaultPointerValmap[name]; ok {
+				//set default pointer value
+				// fmt.Printf("%s  : set default value %+v\n", name, defVal)
+				objValue.Set(defVal)
+			} else {
+				return fmt.Errorf("flag %s default value not provided\n", name)
 			}
 		}
-		if !objValue.IsNil() && (contains || needDefault) {
-			//ISSUE : kind != struct
+		if !objValue.IsNil() && contains {
 			if objValue.Type().Elem().Kind() == reflect.Struct {
-				fmt.Printf("%s : recurse\n", name)
 				if err := fillStructRecursive(objValue.Elem(), defaultPointerValmap, valmap, name); err != nil {
 					return err
 				}
-			} else {
-				fmt.Printf("%s : Should set default value %+v\n", name, defaultPointerValmap[name])
 			}
 		}
 	default:
@@ -390,9 +399,9 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 				parsers[field.Type].SetValue(defaultValmap[flag].Interface())
 			}
 			printDefaultValues = append(printDefaultValues, parsers[field.Type].String())
-		} else {
+		} /*else {
 			printDefaultValues = append(printDefaultValues, "N/A")
-		}
+		}*/
 	}
 
 	// Use a struct to give data to template
@@ -561,9 +570,9 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 				parsers[field.Type].SetValue(defaultValmap[flag].Interface())
 			}
 			printDefaultValues = append(printDefaultValues, parsers[field.Type].String())
-		} else {
+		} /*else {
 			printDefaultValues = append(printDefaultValues, "N/A")
-		}
+		}*/
 	}
 
 	// Use a struct to give data to template
