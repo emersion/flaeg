@@ -2198,7 +2198,7 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	}
 }
 
-func TestNilPointersFieldsEmptyConfig(t *testing.T) {
+func TestSetPointersNilEmptyConfig(t *testing.T) {
 	//run test
 	config := &Configuration{}
 	objVal := reflect.ValueOf(config)
@@ -2216,7 +2216,7 @@ func TestNilPointersFieldsEmptyConfig(t *testing.T) {
 	}
 }
 
-func TestNilPointersFieldsDefaultPointersConfig(t *testing.T) {
+func TestSetPointersNilDefaultPointersConfig(t *testing.T) {
 	//run test
 	objVal := reflect.ValueOf(newDefaultPointersConfiguration())
 	nilPointersConfig, err := setPointersNil(objVal)
