@@ -487,7 +487,7 @@ type Command struct {
 	Description           string
 	Config                interface{}
 	DefaultPointersConfig interface{} //TODO:case DefaultPointersConfig is nil
-	Run                   func(InitalizedConfig interface{}) error
+	Run                   func() error
 }
 
 //LoadWithCommand initializes config : struct fields given by reference, with args : arguments.
@@ -670,7 +670,7 @@ func (f *Flaeg) Run() error {
 		if err := LoadWithCommand(f.rootCommand, commandArgs, f.customParsers, f.commands); err != nil {
 			return err
 		}
-		return f.rootCommand.Run(f.rootCommand.Config) //Ref ?
+		return f.rootCommand.Run() //Ref ?
 	case 1:
 		//look for command
 		for _, command := range f.commands {
@@ -679,7 +679,7 @@ func (f *Flaeg) Run() error {
 				if err := LoadWithCommand(command, commandArgs, f.customParsers, nil); err != nil {
 					return err
 				}
-				return command.Run(command.Config)
+				return command.Run()
 			}
 		}
 		return fmt.Errorf("Command %s not found", commandName)
