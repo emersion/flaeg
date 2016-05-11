@@ -655,9 +655,9 @@ func (f *Flaeg) Run() error {
 	return f.calledCommand.Run()
 }
 
-// Parse calls Flaeg Load Function end returns the parsed configuration strucure (by reference)
+// Parse calls Flaeg Load Function end returns the parsed command structure (by reference)
 // It returns nil and a not nil error if it fails
-func (f *Flaeg) Parse() (interface{}, error) {
+func (f *Flaeg) Parse() (*Command, error) {
 	// split args
 	//TODO : put it in func and unit test it
 	commandName := ""
@@ -671,6 +671,7 @@ func (f *Flaeg) Parse() (interface{}, error) {
 			cptCommands++
 		}
 	}
+	// fmt.Printf("cmdName %s, cmdArgs %s, nbCmd %d\n", commandName, commandArgs, cptCommands)
 	// check args : 0 ou 1 sous commande
 	switch cptCommands {
 	// run sous commande si présente, ou root commande sinon
