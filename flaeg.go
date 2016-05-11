@@ -622,8 +622,8 @@ func PrintErrorWithCommand(err error, flagmap map[string]reflect.StructField, de
 //and row arguments (command and/or flags)
 //a map of custom parsers could be use
 type Flaeg struct {
-	rootCommand   *Command
-	commands      []*Command
+	calledCommand *Command
+	commands      []*Command ///rootCommand is th fist one in this slice
 	args          []string
 	customParsers map[reflect.Type]Parser
 }
@@ -631,7 +631,7 @@ type Flaeg struct {
 //New creats and initialize a pointer on Flaeg
 func New(rootCommand *Command, args []string) *Flaeg {
 	var f Flaeg
-	f.rootCommand = rootCommand
+	f.commands = []*Command{rootCommand}
 	f.args = args
 	f.customParsers = map[reflect.Type]Parser{}
 	return &f
@@ -649,6 +649,15 @@ func (f *Flaeg) AddParser(typ reflect.Type, parser Parser) {
 
 // Run calls the command with flags given as agruments
 func (f *Flaeg) Run() error {
+	if _, err := f.Parse(); err != nil {
+		return err
+	}
+	return f.calledCommand.Run()
+}
+
+// Parse calls Flaeg Load Function end returns the parsed configuration strucure (by reference)
+// It returns nil and a not nil error if it fails
+func (f *Flaeg) Parse() (interface{}, error) {
 	// split args
 	//TODO : put it in func and unit test it
 	commandName := ""
@@ -667,23 +676,25 @@ func (f *Flaeg) Run() error {
 	// run sous commande si présente, ou root commande sinon
 	case 0:
 		//initialize Config
-		if err := LoadWithCommand(f.rootCommand, commandArgs, f.customParsers, f.commands); err != nil {
-			return err
+		f.calledCommand = f.commands[0]
+		if err := LoadWithCommand(f.calledCommand, commandArgs, f.customParsers, f.commands); err != nil {
+			return nil, err
 		}
-		return f.rootCommand.Run() //Ref ?
+		return f.calledCommand, nil
 	case 1:
 		//look for command
 		for _, command := range f.commands {
 			if commandName == command.Name {
 				//initialize Config
-				if err := LoadWithCommand(command, commandArgs, f.customParsers, nil); err != nil {
-					return err
+				f.calledCommand = command
+				if err := LoadWithCommand(f.calledCommand, commandArgs, f.customParsers, nil); err != nil {
+					return nil, err
 				}
-				return command.Run()
+				return f.calledCommand, nil
 			}
 		}
-		return fmt.Errorf("Command %s not found", commandName)
+		return nil, fmt.Errorf("Command %s not found", commandName)
 	default:
-		return fmt.Errorf("Too many commands called, expexted 0 or 1 got %d", cptCommands)
+		return nil, fmt.Errorf("Too many commands called, expexted 0 or 1 got %d", cptCommands)
 	}
 }
