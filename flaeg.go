@@ -525,11 +525,14 @@ func PrintHelpWithCommand(flagmap map[string]reflect.StructField, defaultValmap 
 	// Define a templates
 	// Using POSXE STD : http://pubs.opengroup.org/onlinepubs/9699919799/
 	const helper = `{{.ProgDescription}}
+	
 Usage: {{.ProgName}} [--flag=flag_argument] [-f[flag_argument]] ...     set flag_argument to flag(s)
    or: {{.ProgName}} [--flag[=true|false| ]] [-f[true|false| ]] ...     set true/false to boolean flag(s)
-{{if .SubCommands}}Available Commands:{{range $subCmdName, $subCmdDesc := .SubCommands}}
+{{if .SubCommands}}
+Available Commands:{{range $subCmdName, $subCmdDesc := .SubCommands}}
 {{printf "\t%-50s %s" $subCmdName $subCmdDesc}}{{end}}
-Use "{{.ProgName}} [command] --help" for more information about a command.{{end}}
+Use "{{.ProgName}} [command] --help" for more information about a command.
+{{end}}
 Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$defaultValues := index $.DefaultValues $j}}
 {{printf "\t%-50s %s (default \"%s\")" $flag $description $defaultValues}}{{end}}`
 
@@ -586,8 +589,8 @@ Flags:{{range $j, $flag := .Flags}}{{$description:= index $.Descriptions $j}}{{$
 		tempStruct.ProgName = cmd.Name
 		tempStruct.ProgDescription = cmd.Description
 		tempStruct.SubCommands = map[string]string{}
-		if len(subCmd) > 0 {
-			for _, c := range subCmd {
+		if len(subCmd) > 1 && cmd == subCmd[0] {
+			for _, c := range subCmd[1:] {
 				tempStruct.SubCommands[c.Name] = c.Description
 			}
 		}
