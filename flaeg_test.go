@@ -2267,7 +2267,11 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	flaeg.AddCommand(VersionCmd)
 
 	//run test
-	result, err := flaeg.Parse()
+	cmd, err := flaeg.GetCommand()
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+	result, err := flaeg.Parse(cmd)
 	if err != nil {
 		t.Errorf("Error %s", err.Error())
 	}

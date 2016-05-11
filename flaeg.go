@@ -493,6 +493,7 @@ type Command struct {
 //LoadWithCommand initializes config : struct fields given by reference, with args : arguments.
 //Some custom parsers and some subCommand may be given.
 func LoadWithCommand(cmd *Command, cmdArgs []string, customParsers map[reflect.Type]Parser, subCommand []*Command) error {
+
 	parsers, err := loadParsers(customParsers)
 	if err != nil {
 		return err
@@ -649,7 +650,10 @@ func (f *Flaeg) AddParser(typ reflect.Type, parser Parser) {
 
 // Run calls the command with flags given as agruments
 func (f *Flaeg) Run() error {
-	if _, err := f.Parse(); err != nil {
+	if _, err := f.GetCommand(); err != nil {
+		return err
+	}
+	if _, err := f.Parse(f.calledCommand); err != nil {
 		return err
 	}
 	return f.calledCommand.Run()
@@ -657,7 +661,16 @@ func (f *Flaeg) Run() error {
 
 // Parse calls Flaeg Load Function end returns the parsed command structure (by reference)
 // It returns nil and a not nil error if it fails
-func (f *Flaeg) Parse() (*Command, error) {
+func (f *Flaeg) Parse(cmd *Command) (*Command, error) {
+	if err := LoadWithCommand(cmd, f.args, f.customParsers, f.commands); err != nil {
+		return nil, err
+	}
+	return cmd, nil
+}
+
+// GetCommand uses args to find and return the called command (by reference)
+// It returns nil and a not nil error if it fails
+func (f *Flaeg) GetCommand() (*Command, error) {
 	// split args
 	//TODO : put it in func and unit test it
 	commandName := ""
@@ -678,9 +691,7 @@ func (f *Flaeg) Parse() (*Command, error) {
 	case 0:
 		//initialize Config
 		f.calledCommand = f.commands[0]
-		if err := LoadWithCommand(f.calledCommand, commandArgs, f.customParsers, f.commands); err != nil {
-			return nil, err
-		}
+		f.args = commandArgs
 		return f.calledCommand, nil
 	case 1:
 		//look for command
@@ -688,9 +699,7 @@ func (f *Flaeg) Parse() (*Command, error) {
 			if commandName == command.Name {
 				//initialize Config
 				f.calledCommand = command
-				if err := LoadWithCommand(f.calledCommand, commandArgs, f.customParsers, nil); err != nil {
-					return nil, err
-				}
+				f.args = commandArgs
 				return f.calledCommand, nil
 			}
 		}
