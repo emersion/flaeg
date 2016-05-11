@@ -2198,6 +2198,89 @@ Complete documentation is available at https://github.com/containous/flaeg`,
 	}
 }
 
+func TestParseCommandVersionInitConfigNoDefaultAllFlag(t *testing.T) {
+	//INIT
+	//init root config
+	rootConfig := newConfiguration()
+	//init root default pointers
+	rootDefaultPointers := newDefaultPointersConfiguration()
+	//init version config
+	versionConfig := &VersionConfig{"0.1"}
+
+	//init args
+	args := []string{
+		"--toto",  //no effect
+		"version", //call Command
+		"-v2.2beta",
+	}
+
+	//init commands
+	//root command
+	rootCmd := &Command{
+		Name: "flaegtest",
+		Description: `flaegtest is a test program made to to test flaeg library.
+Complete documentation is available at https://github.com/containous/flaeg`,
+
+		Config:                rootConfig,
+		DefaultPointersConfig: rootDefaultPointers,
+		//test in run
+		Run: func() error {
+			fmt.Printf("Run with config :\n%+v\n", rootConfig)
+			//CHECK
+			check := newConfiguration()
+			check.LogLevel = "INFO"
+			check.Db = newDefaultPointersConfiguration().Db
+			check.Owner.Name = newDefaultPointersConfiguration().Owner.Name
+			check.Owner.DateOfBirth, _ = time.Parse(time.RFC3339, "2016-04-20T17:39:00Z")
+
+			if !reflect.DeepEqual(rootConfig, check) {
+				return fmt.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, rootConfig)
+			}
+			return nil
+		},
+	}
+	//vesion command
+	VersionCmd := &Command{
+		Name:        "version",
+		Description: `Print version`,
+
+		Config:                versionConfig,
+		DefaultPointersConfig: versionConfig,
+		//test in run
+		Run: func() error {
+			fmt.Printf("Version %s \n", versionConfig.Version)
+			//CHECK
+			if versionConfig.Version != "2.2beta" {
+				return fmt.Errorf("expected 2.2beta got %s", versionConfig.Version)
+			}
+			return nil
+
+		},
+	}
+
+	//TEST
+	//init flaeg
+	flaeg := New(rootCmd, args)
+	//add custom parser to fleag
+	flaeg.AddParser(reflect.TypeOf([]ServerInfo{}), &sliceServerValue{})
+	//add command Version
+	flaeg.AddCommand(VersionCmd)
+
+	//run test
+	result, err := flaeg.Parse()
+	if err != nil {
+		t.Errorf("Error %s", err.Error())
+	}
+
+	//check
+	check := &VersionConfig{"2.2beta"}
+
+	if !reflect.DeepEqual(result.Config, check) {
+		t.Errorf("\nexpected \t%+v \ngot \t\t%+v\n", check, result.Config)
+	}
+
+}
+
 func TestSetPointersNilEmptyConfig(t *testing.T) {
 	//run test
 	config := &Configuration{}
