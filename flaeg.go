@@ -653,8 +653,10 @@ func (f *Flaeg) AddParser(typ reflect.Type, parser Parser) {
 
 // Run calls the command with flags given as agruments
 func (f *Flaeg) Run() error {
-	if _, err := f.GetCommand(); err != nil {
-		return err
+	if f.calledCommand == nil {
+		if _, err := f.GetCommand(); err != nil {
+			return err
+		}
 	}
 	if _, err := f.Parse(f.calledCommand); err != nil {
 		return err
@@ -671,7 +673,7 @@ func (f *Flaeg) Parse(cmd *Command) (*Command, error) {
 	return cmd, nil
 }
 
-// GetCommand uses args to find and return the called command (by reference)
+// GetCommand splits args and returns the called command (by reference)
 // It returns nil and a not nil error if it fails
 func (f *Flaeg) GetCommand() (*Command, error) {
 	// split args
@@ -690,7 +692,6 @@ func (f *Flaeg) GetCommand() (*Command, error) {
 	// fmt.Printf("cmdName %s, cmdArgs %s, nbCmd %d\n", commandName, commandArgs, cptCommands)
 	// check args : 0 ou 1 sous commande
 	switch cptCommands {
-	// run sous commande si présente, ou root commande sinon
 	case 0:
 		//initialize Config
 		f.calledCommand = f.commands[0]
