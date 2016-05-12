@@ -668,6 +668,9 @@ func (f *Flaeg) Run() error {
 // Parse calls Flaeg Load Function end returns the parsed command structure (by reference)
 // It returns nil and a not nil error if it fails
 func (f *Flaeg) Parse(cmd *Command) (*Command, error) {
+	if f.calledCommand == nil {
+		f.commmandArgs = f.args
+	}
 	if err := LoadWithCommand(cmd, f.commmandArgs, f.customParsers, f.commands); err != nil {
 		return nil, err
 	}
