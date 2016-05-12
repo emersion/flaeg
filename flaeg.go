@@ -629,6 +629,7 @@ type Flaeg struct {
 	calledCommand *Command
 	commands      []*Command ///rootCommand is th fist one in this slice
 	args          []string
+	commmandArgs  []string
 	customParsers map[reflect.Type]Parser
 }
 
@@ -667,7 +668,7 @@ func (f *Flaeg) Run() error {
 // Parse calls Flaeg Load Function end returns the parsed command structure (by reference)
 // It returns nil and a not nil error if it fails
 func (f *Flaeg) Parse(cmd *Command) (*Command, error) {
-	if err := LoadWithCommand(cmd, f.args, f.customParsers, f.commands); err != nil {
+	if err := LoadWithCommand(cmd, f.commmandArgs, f.customParsers, f.commands); err != nil {
 		return nil, err
 	}
 	return cmd, nil
@@ -679,13 +680,13 @@ func (f *Flaeg) GetCommand() (*Command, error) {
 	// split args
 	//TODO : put it in func and unit test it
 	commandName := ""
-	commandArgs := f.args
+	f.commmandArgs = f.args
 	cptCommands := 0
 	for i, arg := range f.args {
 		if string(arg[0]) != "-" {
 			//TODO case sensitivity
 			commandName = strings.ToLower(arg)
-			commandArgs = f.args[i+1:]
+			f.commmandArgs = f.args[i+1:]
 			cptCommands++
 		}
 	}
@@ -695,7 +696,6 @@ func (f *Flaeg) GetCommand() (*Command, error) {
 	case 0:
 		//initialize Config
 		f.calledCommand = f.commands[0]
-		f.args = commandArgs
 		return f.calledCommand, nil
 	case 1:
 		//look for command
@@ -703,7 +703,6 @@ func (f *Flaeg) GetCommand() (*Command, error) {
 			if commandName == command.Name {
 				//initialize Config
 				f.calledCommand = command
-				f.args = commandArgs
 				return f.calledCommand, nil
 			}
 		}
