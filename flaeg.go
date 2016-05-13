@@ -137,7 +137,7 @@ func parseArgs(args []string, flagmap map[string]reflect.StructField, parsers ma
 			}
 			newParsers[flag] = newparser
 		} else {
-			fmt.Printf("No parser for type %s\n", structField.Type)
+			return nil, fmt.Errorf("%s :No parser for type %s\n", flag, structField.Type)
 		}
 	}
 
