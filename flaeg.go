@@ -250,8 +250,8 @@ func setPointersNil(objValue reflect.Value) (reflect.Value, error) {
 	starNilPointersObjVal.Set(starObjValue)
 
 	for i := 0; i < nilPointersObjVal.Elem().NumField(); i++ {
-		if nilPointersObjVal.Elem().Field(i).Kind() == reflect.Ptr {
-			nilPointersObjVal.Elem().Field(i).Set(reflect.Zero(nilPointersObjVal.Elem().Field(i).Type()))
+		if field := nilPointersObjVal.Elem().Field(i); field.Kind() == reflect.Ptr && field.CanSet() {
+			field.Set(reflect.Zero(field.Type()))
 		}
 	}
 	return nilPointersObjVal, nil
