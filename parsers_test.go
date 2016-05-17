@@ -21,20 +21,17 @@ func TestSliceStringsSet(t *testing.T) {
 			t.Fatalf("Expected:%s\ngot:%s", check, slice)
 		}
 	}
-
-	var slice2 SliceStrings
-	checkMap2 := map[string]SliceStrings{
-		"str1":      SliceStrings{"str1"},
-		"str2,str3": SliceStrings{"str1", "str2", "str3"},
-		"str4":      SliceStrings{"str1", "str2", "str3", "str4"},
+}
+func TestSliceStringsSetAdd(t *testing.T) {
+	slice := SliceStrings{"str1"}
+	//test
+	if err := slice.Set("str2,str3"); err != nil {
+		t.Fatalf("Error :%s", err)
 	}
-	for str, check := range checkMap2 {
-		if err := slice2.Set(str); err != nil {
-			t.Fatalf("Error :%s", err)
-		}
-		if !reflect.DeepEqual(slice2, check) {
-			t.Fatalf("Expected:%s\ngot:%s", check, slice2)
-		}
+	//check
+	check := SliceStrings{"str1", "str2", "str3"}
+	if !reflect.DeepEqual(slice, check) {
+		t.Fatalf("Expected:%s\ngot:%s", check, slice)
 	}
 }
 
